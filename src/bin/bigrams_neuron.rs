@@ -2,6 +2,7 @@ use std::{char, collections::{HashMap, HashSet}, error::Error};
 use candle_core::{Tensor, Device, Var};
 use candle_nn::encoding;
 use makemore;
+use rand::{rngs::StdRng, SeedableRng};
 
 /// This program implements the bigram using one-layer neuron. References:
 /// * [The spelled-out intro to language modeling: building makemore](https://www.youtube.com/watch?v=PaCmpygFfXo&t=3777s) video from Andrej Karparthy.
@@ -41,9 +42,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         ys.push(0);
     });
     
+    let device = &Device::Cpu;
     let size = xs.len();
-    let xs = Tensor::from_vec(xs, size, &Device::Cpu)?;
-    let ys = Tensor::from_vec(ys, size, &Device::Cpu)?;
+    let xs = Tensor::from_vec(xs, size, device)?;
+    let ys = Tensor::from_vec(ys, size, device)?;
     println!("Training set size: {}", size);
     println!("xs: {}", xs);
     println!("ys: {}", ys);
@@ -55,21 +57,47 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // optimize the parameters using gradient descent
     const LEARNING_RATE: f64 = 80.0;
-    let w = Var::randn(0.0f32, 1.0f32, (num_chars, num_chars), &Device::Cpu)?;
-    for _ in 0..30 {
+    let w = Var::randn(0.0f32, 1.0f32, (num_chars, num_chars), device)?;
+    for i in 0..30 {
         // Forward pass
         let logits = xenc.matmul(w.as_tensor())?;
         let counts = logits.exp()?;
         let probs = &counts.broadcast_div(&counts.sum_keepdim(1)?)?;
 
         let loss = probs.gather(&ys.unsqueeze(1)?, 1)?.log()?.mean_all()?.neg()?;
-        println!("Loss: {}", loss.to_scalar::<f32>()?);
+        println!("Epoch: {}, Loss: {}", i, loss.to_scalar::<f32>()?);
 
         // Backward pass
         let grad_store = loss.backward()?;
         let grad = grad_store.get(&w).expect("Failed to get gradients for w");
         w.set(&w.sub(&(grad * LEARNING_RATE)?)?)?;
     }
+
+    // sampling names
+    let mut rng = StdRng::seed_from_u64(1750132625);
+    let mut output: Vec<String> = vec![];
+    for _ in 0..5 {
+        let mut name = String::new();
+        let mut last_index = 0;
+        loop {
+            let x = Tensor::from_vec(vec![last_index as u32], 1, device)?;
+            let xenc = encoding::one_hot(x, num_chars, 1.0f32, 0.0f32)?;
+            let logits = xenc.matmul(w.as_tensor())?;
+            let counts = logits.exp()?;
+            let prob = &counts.broadcast_div(&counts.sum_keepdim(1)?)?
+                .squeeze(0)?;
+            let next_index = makemore::sampling(&prob, &mut rng)?;
+            name.push(index_to_char[&next_index]);
+            last_index = next_index;
+            if last_index == 0 {
+                break;
+            }
+        }
+
+        output.push(name);
+    }
+    println!("Generated names: {:?}", output);
+
 
     Ok(())
 }
