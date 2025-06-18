@@ -3,6 +3,9 @@ use candle_core::{Tensor, DType, Device};
 use rand::{rngs::StdRng, SeedableRng};
 use makemore;
 
+/// This program implements the bigram using couting. References:
+/// * [The spelled-out intro to language modeling: building makemore](https://www.youtube.com/watch?v=PaCmpygFfXo) video from Andrej Karparthy.
+/// * First half of the bigrams [notebook](https://github.com/karpathy/nn-zero-to-hero/blob/master/lectures/makemore/makemore_part1_bigrams.ipynb).
 fn main() -> Result<(), Box<dyn Error>> {
     // read words from the file.
     let words = makemore::read_lines("names.txt").expect("Failed to read lines from file");
