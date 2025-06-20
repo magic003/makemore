@@ -4,7 +4,7 @@ An autoregressive character-level language model for making more things in Rust.
 * Youtube video: [Building makemore Part 2: MLP](https://www.youtube.com/watch?v=TCH_1BHY58I).
 * Makemore notebooks on [github](https://github.com/karpathy/nn-zero-to-hero/tree/master/lectures/makemore). 
 
-I wrote it in Zig for education purpose, and for fun of course. :)
+I wrote it in Rust for education purpose, and for fun of course. :)
 
 ### What
 
@@ -15,7 +15,8 @@ It implements a character-level language model using bigrams. It's implemented i
 
 ### How to run
 ```sh
-% cargo run --bin bigrams_counting
+% cargo build --release
+% ./target/release/bigrams_mlp
 ```
 ### License
 
